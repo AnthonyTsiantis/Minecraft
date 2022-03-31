@@ -13,14 +13,18 @@ import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.ScreenUtils;
 
+import java.util.ArrayList;
+
 public class Game extends ApplicationAdapter implements InputProcessor {
 	private PerspectiveCamera camera;
 	private ModelBatch modelBatch;
 	private ModelBuilder modelBuilder;
-	private Model dirt, diamond;
-	private ModelInstance dirtModelInstance, diamondModelInstance;
+	private Model dirt;
 	private Environment environment;
-	private Texture dirtTexture, diamondTexture;
+	private Texture dirtTexture;
+	private ArrayList instances;
+	private Vector3 desiredCamPos;
+	private boolean keyDownW, keyDownA, keyDownS, keyDownD = false;
 
 
 	@Override
@@ -28,8 +32,9 @@ public class Game extends ApplicationAdapter implements InputProcessor {
 		// Create Camera Object
 		camera = new PerspectiveCamera(75, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 
-		// Set Camera position 3 blocks behind origin
-		camera.position.set(0f, 0f, 3f);
+		// Set Camera position 3 blocks behind and 2 above origin
+		camera.position.set(0f, 2f, 3f);
+		desiredCamPos = new Vector3(0f,2f,3f);
 
 		// Make the Camera look at the origin
 		camera.lookAt(0f, 0f, 0f);
@@ -40,23 +45,19 @@ public class Game extends ApplicationAdapter implements InputProcessor {
 
 		// Create Model Batch
 		modelBatch = new ModelBatch();
-		ModelBuilder modelBuilder = new ModelBuilder();
+		modelBuilder = new ModelBuilder();
 		dirtTexture = new Texture(Gdx.files.internal("Blocks/dirt.png"));
-		dirt = modelBuilder.createBox(1f, 1f, 1f,
-				new Material(TextureAttribute.createDiffuse(dirtTexture)),
-				VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal | VertexAttributes.Usage.TextureCoordinates
-		);
+		instances = new ArrayList<ModelInstance>();
 
-		diamondTexture = new Texture(Gdx.files.internal("Blocks/diamond_block.png"));
-		diamond = modelBuilder.createBox(1f, 1f, 1f,
-				new Material(TextureAttribute.createDiffuse(diamondTexture)),
-				VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal | VertexAttributes.Usage.TextureCoordinates
-		);
-
-
-		// Create an instance of this model at origin
-		dirtModelInstance = new ModelInstance(dirt, 0,0,0);
-		diamondModelInstance = new ModelInstance(diamond, 1,0,0);
+		for (int i = 0; i < 10; i++) {
+			for (int j = 0; j < 10; j++) {
+				dirt = modelBuilder.createBox(1f, 1f, 1f,
+						new Material(TextureAttribute.createDiffuse(dirtTexture)),
+						VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal | VertexAttributes.Usage.TextureCoordinates
+				);
+				instances.add(new ModelInstance(dirt, i, 0, j));
+			}
+		}
 
 		// Add an ambient light
 		environment = new Environment();
@@ -71,47 +72,84 @@ public class Game extends ApplicationAdapter implements InputProcessor {
 		ScreenUtils.clear(0, 0, 0, 1);
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT|GL20.GL_DEPTH_BUFFER_BIT);
 		camera.update();
+		checkInput();
 		modelBatch.begin(camera);
-		modelBatch.render(dirtModelInstance, environment);
-		modelBatch.render(diamondModelInstance, environment);
+		for (int i = 0; i < 100; i++) {
+			modelBatch.render((RenderableProvider) instances.get(i), environment);
+		}
 		modelBatch.end();
 	}
 	
 	@Override
-	public void dispose () {
+	public void dispose() {
 		dirt.dispose();
-		diamond.dispose();
 		modelBatch.dispose();
+	}
+
+	public void checkInput() {
+		if (keyDownA) {
+			desiredCamPos.x += 0.1f;
+			camera.position.set(desiredCamPos);
+		}
+
+		if (keyDownW) {
+			desiredCamPos.z -= 0.1f;
+			camera.position.set(desiredCamPos);
+		}
+
+		if (keyDownD) {
+			desiredCamPos.x -= 0.1f;
+			camera.position.set(desiredCamPos);
+		}
+		if (keyDownS) {
+			desiredCamPos.z += 0.1f;
+			camera.position.set(desiredCamPos);
+		}
 	}
 
 	@Override
 	public boolean keyDown(int keycode) {
-		if(keycode == Input.Keys.LEFT) {
-			// Fix this so you do not create a new Vector 3 everytime a key is pressed // TODO
-			// Use a temporary static member instead
-			camera.rotateAround(new Vector3(0f, 0f, 0f), new Vector3(0f, 1f, 0f), 10f);
-		}
-		if(keycode == Input.Keys.RIGHT) {
-			// Fix this so you do not create a new Vector 3 everytime a key is pressed // TODO
-			// Use a temporary static member instead
-			camera.rotateAround(new Vector3(0f, 0f, 0f), new Vector3(0f, 1f, 0f), -10f);
-		}
-		if(keycode == Input.Keys.UP) {
-			// Fix this so you do not create a new Vector 3 everytime a key is pressed // TODO
-			// Use a temporary static member instead
-			camera.rotateAround(new Vector3(0f, 0f, 0f), new Vector3(1f, 0f, 0f), -10f);
+		if (keycode == Input.Keys.A) {
+			keyDownA = true;
+			return true;
 		}
 
-		if(keycode == Input.Keys.DOWN) {
-			// Fix this so you do not create a new Vector 3 everytime a key is pressed // TODO
-			// Use a temporary static member instead
-			camera.rotateAround(new Vector3(0f, 0f, 0f), new Vector3(1f, 0f, 0f), -10f);
+		if (keycode == Input.Keys.W) {
+			keyDownW = true;
+			return true;
 		}
-		return true;
+
+		if (keycode == Input.Keys.D) {
+			keyDownD = true;
+			return true;
+		}
+		if (keycode == Input.Keys.S) {
+			keyDownS = true;
+			return true;
+		}
+		return false;
 	}
 
 	@Override
 	public boolean keyUp(int keycode) {
+		if (keycode == Input.Keys.A) {
+			keyDownA = false;
+			return true;
+		}
+
+		if (keycode == Input.Keys.W) {
+			keyDownW = false;
+			return true;
+		}
+
+		if (keycode == Input.Keys.D) {
+			keyDownD = false;
+			return true;
+		}
+		if (keycode == Input.Keys.S) {
+			keyDownS = false;
+			return true;
+		}
 		return false;
 	}
 
