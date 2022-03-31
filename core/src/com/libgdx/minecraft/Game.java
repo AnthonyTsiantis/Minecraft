@@ -5,26 +5,24 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.graphics.*;
-import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g3d.*;
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
 import com.badlogic.gdx.graphics.g3d.attributes.TextureAttribute;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
 import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.ScreenUtils;
-
-import java.util.ArrayList;
 
 public class Game extends ApplicationAdapter implements InputProcessor {
 	private PerspectiveCamera camera;
 	private ModelBatch modelBatch;
-	private ModelBuilder modelBuilder;
 	private Model dirt;
 	private Environment environment;
 	private Texture dirtTexture;
-	private ArrayList instances;
 	private Vector3 desiredCamPos;
 	private boolean keyDownW, keyDownA, keyDownS, keyDownD = false;
+	private Array<ModelInstance> instances;
+	private ModelBuilder modelBuilder;
 
 
 	@Override
@@ -47,15 +45,17 @@ public class Game extends ApplicationAdapter implements InputProcessor {
 		modelBatch = new ModelBatch();
 		modelBuilder = new ModelBuilder();
 		dirtTexture = new Texture(Gdx.files.internal("Blocks/dirt.png"));
-		instances = new ArrayList<ModelInstance>();
+		instances = new Array<ModelInstance>();
 
 		for (int i = 0; i < 10; i++) {
 			for (int j = 0; j < 10; j++) {
-				dirt = modelBuilder.createBox(1f, 1f, 1f,
-						new Material(TextureAttribute.createDiffuse(dirtTexture)),
-						VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal | VertexAttributes.Usage.TextureCoordinates
-				);
-				instances.add(new ModelInstance(dirt, i, 0, j));
+				for (int k = -11; k < 0; k++) {
+					dirt = modelBuilder.createBox(1f, 1f, 1f,
+							new Material(TextureAttribute.createDiffuse(dirtTexture)),
+							VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal | VertexAttributes.Usage.TextureCoordinates
+					);
+					instances.add(new ModelInstance(dirt, i, k, j));
+				}
 			}
 		}
 
@@ -69,17 +69,17 @@ public class Game extends ApplicationAdapter implements InputProcessor {
 
 	@Override
 	public void render () {
-		ScreenUtils.clear(0, 0, 0, 1);
+		ScreenUtils.clear(0f, 0f, 0f, 1f);
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT|GL20.GL_DEPTH_BUFFER_BIT);
 		camera.update();
 		checkInput();
 		modelBatch.begin(camera);
-		for (int i = 0; i < 100; i++) {
-			modelBatch.render((RenderableProvider) instances.get(i), environment);
+		for (int i = 0; i < instances.size; i++) {
+			modelBatch.render(instances.get(i), environment);
 		}
 		modelBatch.end();
 	}
-	
+
 	@Override
 	public void dispose() {
 		dirt.dispose();
@@ -88,7 +88,7 @@ public class Game extends ApplicationAdapter implements InputProcessor {
 
 	public void checkInput() {
 		if (keyDownA) {
-			desiredCamPos.x += 0.1f;
+			desiredCamPos.x -= 0.1f;
 			camera.position.set(desiredCamPos);
 		}
 
@@ -98,7 +98,7 @@ public class Game extends ApplicationAdapter implements InputProcessor {
 		}
 
 		if (keyDownD) {
-			desiredCamPos.x -= 0.1f;
+			desiredCamPos.x += 0.1f;
 			camera.position.set(desiredCamPos);
 		}
 		if (keyDownS) {
