@@ -8,20 +8,26 @@ import com.badlogic.gdx.graphics.*;
 import com.badlogic.gdx.graphics.g3d.*;
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
 import com.badlogic.gdx.graphics.g3d.attributes.TextureAttribute;
+import com.badlogic.gdx.graphics.g3d.utils.MeshPartBuilder;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
+import com.badlogic.gdx.graphics.g3d.utils.shapebuilders.BoxShapeBuilder;
+import com.badlogic.gdx.math.Quaternion;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.ScreenUtils;
 
+import javax.swing.*;
+
 public class Game extends ApplicationAdapter implements InputProcessor {
 	private PerspectiveCamera camera;
+	private Model model;
 	private ModelBatch modelBatch;
 	private Model dirt;
 	private Environment environment;
 	private Texture dirtTexture;
 	private Vector3 desiredCamPos;
 	private boolean keyDownW, keyDownA, keyDownS, keyDownD = false;
-	private Array<ModelInstance> instances;
+	private Array<ModelInstance> instances = new Array<ModelInstance>();
 	private ModelBuilder modelBuilder;
 
 
@@ -41,23 +47,8 @@ public class Game extends ApplicationAdapter implements InputProcessor {
 		camera.near = 0.1f;
 		camera.far = 300f;
 
-		// Create Model Batch
-		modelBatch = new ModelBatch();
-		modelBuilder = new ModelBuilder();
-		dirtTexture = new Texture(Gdx.files.internal("Blocks/dirt.png"));
-		instances = new Array<ModelInstance>();
-
-		for (int i = 0; i < 10; i++) {
-			for (int j = 0; j < 10; j++) {
-				for (int k = -11; k < 0; k++) {
-					dirt = modelBuilder.createBox(1f, 1f, 1f,
-							new Material(TextureAttribute.createDiffuse(dirtTexture)),
-							VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal | VertexAttributes.Usage.TextureCoordinates
-					);
-					instances.add(new ModelInstance(dirt, i, k, j));
-				}
-			}
-		}
+		// Generate world
+		drawWorld();
 
 		// Add an ambient light
 		environment = new Environment();
@@ -72,18 +63,51 @@ public class Game extends ApplicationAdapter implements InputProcessor {
 		ScreenUtils.clear(0f, 0f, 0f, 1f);
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT|GL20.GL_DEPTH_BUFFER_BIT);
 		camera.update();
-		checkInput();
 		modelBatch.begin(camera);
 		for (int i = 0; i < instances.size; i++) {
 			modelBatch.render(instances.get(i), environment);
 		}
 		modelBatch.end();
+		checkInput();
 	}
 
 	@Override
 	public void dispose() {
 		dirt.dispose();
 		modelBatch.dispose();
+	}
+
+	public void drawWorld() {
+		// Draw all chunks
+		for (int x = -11; x < 10; x++) {
+			for (int z = -11; z < 10; z++) {
+				instances.add(drawChunk(x, 0, z));
+			}
+		}
+	}
+
+	public ModelInstance drawChunk(int x, int y ,int z) {
+		// Create Model Batch
+		modelBuilder = new ModelBuilder();
+		modelBatch = new ModelBatch();
+		dirtTexture = new Texture(Gdx.files.internal("Blocks/dirt.png"));
+
+		modelBuilder = new ModelBuilder();
+		modelBuilder.begin();
+		MeshPartBuilder mpb = modelBuilder.part("box", GL20.GL_TRIANGLES,
+				VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal | VertexAttributes.Usage.TextureCoordinates,
+				new Material(TextureAttribute.createDiffuse(dirtTexture)));
+
+		//TODO // There is a cap on vertices for some reason
+		for (int i = 0; i < 10; i++) {
+			for (int j = 0; j < 10; j++) {
+				for (int k = -11; k < 0; k++) {
+					BoxShapeBuilder.build(mpb, i + x, k + y, j + z, 1f, 1f, 1f);
+				}
+			}
+		}
+		model = modelBuilder.end();
+		return new ModelInstance(model);
 	}
 
 	public void checkInput() {
